@@ -1,0 +1,42 @@
+key 1
+IR@b00cac23-0b45-4422-99ee-953a1794717e@pranoy-data-factory@ServiceEndpoint=pranoy-data-factory.westus.datafactory.azure.net@o5koPWKjGKjEs++U+n9X6SZold0kUlRZfaFS+PQE/70=
+
+key 2
+IR@b00cac23-0b45-4422-99ee-953a1794717e@pranoy-data-factory@ServiceEndpoint=pranoy-data-factory.westus.datafactory.azure.net@EVxtUyUVSxpNMzA//I+6RhoRjlRR9TK4eD8i2N4CGj4=
+
+-------------------------------------
+{
+    "name": "ls_onprem_storage",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "annotations": [],
+        "type": "FileServer",
+        "typeProperties": {
+            "host": "D:\\de-adf-synapse-databricks-complete-learning\\Azure Data Factory (ADF) Project\\data\\csv_files",
+            "userId": "pcslg1998@gmail.com",
+            "encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJjODBlNDViNS0yMTgxLTRiNTItYmJkMy04MjZiZjMxYWRmMjUiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+        },
+        "connectVia": {
+            "referenceName": "PranoySelfHostedIntegrationRuntime",
+            "type": "IntegrationRuntimeReference"
+        }
+    }
+}
+------------------------------------
+1.	cd "C:\Program Files\Microsoft Integration Runtime\5.0\Shared\"
+2.	 .\dmgcmd.exe -DisableLocalFolderPathValidation
+
+------------------------------------
+files array:
+
+[
+	{
+		"file_name":"DimAirline.csv"
+	},
+	{
+		"file_name":"DimFlight.csv"
+	},
+	{
+		"file_name":"DimPassenger.csv"
+	}
+]
