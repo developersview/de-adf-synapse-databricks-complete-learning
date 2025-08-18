@@ -40,3 +40,19 @@ files array:
 		"file_name":"DimPassenger.csv"
 	}
 ]
+
+---------------------------------------
+https://raw.githubusercontent.com/developersview/de-adf-synapse-databricks-complete-learning/refs/heads/master/Azure%20Data%20Factory%20(ADF)%20Project/data/json_files/DimAirport.json
+
+---------------------------------------
+sql server: adf-project-pranoy.database.windows.net
+
+Microsoft Entra Login: 
+pranoy.chakraborty890_gmail.com#EXT#@pranoychakraborty890gmail.onmicrosoft.com
+(use Microsoft Entra MFA)
+
+praadmin
+Pranoy@123
+
+
+"lastload": "1900-01-01T00:00:00Z"
