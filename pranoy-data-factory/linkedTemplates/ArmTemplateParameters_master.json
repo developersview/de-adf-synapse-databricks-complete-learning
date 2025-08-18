@@ -1,0 +1,45 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "pranoy-data-factory"
+		},
+		"ls_azuresql_password": {
+			"value": ""
+		},
+		"ls_datalake_accountKey": {
+			"value": ""
+		},
+		"ls_onprem_storage_password": {
+			"value": ""
+		},
+		"ls_azuresql_properties_typeProperties_server": {
+			"value": "adf-project-pranoy.database.windows.net"
+		},
+		"ls_azuresql_properties_typeProperties_database": {
+			"value": "adfdb"
+		},
+		"ls_azuresql_properties_typeProperties_userName": {
+			"value": "praadmin"
+		},
+		"ls_datalake_properties_typeProperties_url": {
+			"value": "https://pranoyadlsgen2.dfs.core.windows.net/"
+		},
+		"ls_github_properties_typeProperties_url": {
+			"value": "https://raw.githubusercontent.com/"
+		},
+		"ls_onprem_storage_properties_typeProperties_host": {
+			"value": "D:\\de-adf-synapse-databricks-complete-learning\\Azure Data Factory (ADF) Project\\data\\csv_files"
+		},
+		"ls_onprem_storage_properties_typeProperties_userId": {
+			"value": "pcslg1998@gmail.com"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
