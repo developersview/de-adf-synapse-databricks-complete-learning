@@ -1,0 +1,127 @@
+{
+	"name": "data-ingestion-parent-pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "ExecuteOnPremPipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "data-ingestion-onprem-to-datalake",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"files": {
+							"value": "@pipeline().parameters.files",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "ExecuteAPIPipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ExecuteOnPremPipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "data-ingestion-github-to-datalake",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "ExecuteAzureSQLPipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ExecuteAPIPipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "data-ingestion-azuresql-to-datalake",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Alert",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "ExecuteAzureSQLPipeline",
+						"dependencyConditions": [
+							"Skipped",
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": {
+						"value": "https://prod-07.northcentralus.logic.azure.com:443/workflows/1e6b4252f8964c25ae22cd5db8dae02a/triggers/When_a_HTTP_request_is_received_from_Azure_Data_Factory/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received_from_Azure_Data_Factory%2Frun&sv=1.0&sig=fe69jibKEb8dPbpElkoiaQT1nKK70ox1Y2kQhphDaB8",
+						"type": "Expression"
+					},
+					"body": {
+						"value": "{\n    \"pipeline_name\" : \"@{pipeline().Pipeline}\",\n    \"run_id\" : \"@{pipeline().RunId}\",\n    \"status\" : \"@{activity('ExecuteAzureSQLPipeline').Status}\",\n    \"error\" : \"@{if(equals(activity('ExecuteAzureSQLPipeline').status, 'Failed'), string(activity('ExecuteAzureSQLPipeline').error), 'No Error')}\"\n}",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"files": {
+				"type": "array",
+				"defaultValue": [
+					{
+						"file_name": "DimAirline.csv"
+					},
+					{
+						"file_name": "DimFlight.csv"
+					},
+					{
+						"file_name": "DimPassenger.csv"
+					}
+				]
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-08-18T05:39:50Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

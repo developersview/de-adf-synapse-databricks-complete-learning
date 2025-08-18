@@ -1,0 +1,7 @@
+{
+	"name": "PranoySelfHostedIntegrationRuntime",
+	"properties": {
+		"type": "SelfHosted",
+		"description": "This is a self hosted integration runtime"
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"name": "ls_onprem_storage",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "FileServer",
+		"typeProperties": {
+			"host": "D:\\de-adf-synapse-databricks-complete-learning\\Azure Data Factory (ADF) Project\\data\\csv_files",
+			"userId": "pcslg1998@gmail.com",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJjODBlNDViNS0yMTgxLTRiNTItYmJkMy04MjZiZjMxYWRmMjUiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "PranoySelfHostedIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
