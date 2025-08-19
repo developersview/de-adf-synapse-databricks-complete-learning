@@ -1,0 +1,4 @@
+Synapse project:
+
+username (admin login) : sqladmin
+password : Pranoy@123
