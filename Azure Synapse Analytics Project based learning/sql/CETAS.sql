@@ -1,3 +1,4 @@
+-- Serverless SQL Pool
 -----------
 -- CETAS
 -----------

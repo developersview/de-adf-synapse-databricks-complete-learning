@@ -1,3 +1,4 @@
+-- Dedicated SQL POOL
 ----------------
 -- HASH TABLE
 -----------------

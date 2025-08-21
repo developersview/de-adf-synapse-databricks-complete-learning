@@ -1,3 +1,4 @@
+-- Dedicated SQL POOL
 ----------------
 -- CREATE SCHEMA
 ----------------

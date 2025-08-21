@@ -1,3 +1,4 @@
+-- Serverless SQL POOL
 ---------------------------
 -- Create external table
 ---------------------------
