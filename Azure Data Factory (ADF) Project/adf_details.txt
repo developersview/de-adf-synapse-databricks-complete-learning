@@ -56,3 +56,12 @@ Pranoy@123
 
 
 "lastload": "1900-01-01T00:00:00Z"
+
+
+-----------------------------------------------
+{
+    "pipeline_name" : "@{pipeline().Pipeline}",
+    "run_id" : "@{pipeline().RunId}",
+    "status" : "@{activity('ExecuteAzureSQLPipeline').Status}",
+    "error" : "@{if(equals(activity('ExecuteAzureSQLPipeline').status, 'Failed'), string(activity('ExecuteAzureSQLPipeline').error), 'No Error')}"
+}

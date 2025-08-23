@@ -2,3 +2,47 @@ Integration Runtime Keys:
 IR@c594052e-daba-4765-955d-4036b6149e3d@pranoy-data-factory2@ServiceEndpoint=pranoy-data-factory2.westus.datafactory.azure.net@tzSfnEHtNHi5OTVN20EsYGrjdEnOXxvS/49hYAPczlw=
 
 IR@c594052e-daba-4765-955d-4036b6149e3d@pranoy-data-factory2@ServiceEndpoint=pranoy-data-factory2.westus.datafactory.azure.net@l7kIpvVBXIG4xbro63JzMEmbV0Iu56I0v8DmIuDuGjE=
+
+
+
+---------------------------------------------------------
+sql server: adf-project-pranoy.database.windows.net
+
+Microsoft Entra Login: 
+pranoy.chakraborty890_gmail.com#EXT#@pranoychakraborty890gmail.onmicrosoft.com
+(use Microsoft Entra MFA)
+
+praadmin
+Pranoy@123
+
+----------------------------------------------------------
+[
+	{
+		"folder_name":"campaigns",
+		"file_name":"dim_campaigns.csv"
+	},
+	{
+		"folder_name":"dates",
+		"file_name":"dim_dates.csv"
+	},
+	{
+		"folder_name":"products",
+		"file_name":"dim_products.csv"
+	},
+	{
+		"folder_name":"salespersons",
+		"file_name":"dim_salespersons.csv"
+	},
+	{
+		"folder_name":"stores",
+		"file_name":"dim_stores.csv"
+	}
+]
+
+------------------------------------------------------
+{
+    "pipeline_name" : "@{pipeline().Pipeline}",
+    "run_id" : "@{pipeline().RunId}",
+    "status" : "@{activity('ExecuteAzureSQLPipeline').Status}",
+    "error" : "@{if(equals(activity('ExecuteAzureSQLPipeline').status, 'Failed'), string(activity('ExecuteAzureSQLPipeline').error), 'No Error')}"
+}
