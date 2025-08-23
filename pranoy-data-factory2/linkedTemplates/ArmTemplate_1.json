@@ -1,0 +1,1308 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "pranoy-data-factory2"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/data-aggregation-serving-silver-to-gold')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data Aggregation and Serving",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "DataAggregationAndServing",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"DimSalesPerson": {},
+									"FactSales": {},
+									"DimProducts": {},
+									"DimCustomer": {},
+									"DimDates": {},
+									"DimCampaigns": {},
+									"DimStores": {},
+									"SinkTotalSales": {},
+									"SinkTopSalesPerson": {},
+									"SinkTopSellingProducts": {},
+									"SinkTotalSalesByBrand": {},
+									"SinkTotalSalesByCategory": {},
+									"SinkProductCountByCustomerSegment": {},
+									"SinkAlterRowCustomerProduct": {},
+									"SinkTotalCustomerCountBySegment": {},
+									"SinkTotalCustomerCountByLocation": {},
+									"SinkStores": {},
+									"SinkTotalSalesPerMonth": {},
+									"SinkTotalSalesPerQuarter": {},
+									"SinkCampaigns": {},
+									"SinkSales": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 16,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-08-23T14:36:52Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/data-ingestion-azuresql-to-datalake')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "LastLoadFromJson",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "ds_src_datalake_monitor",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "LatestLoadFromSQL",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT MAX(sales_date) AS LatestLoad FROM [dbo].[FactSales];",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_src_azuresql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "CopyDataFromAzureSQL",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "LastLoadFromJson",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "LatestLoadFromSQL",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT * FROM [dbo].[FactSales]\nWHERE sales_date > '@{activity('LastLoadFromJson').output.firstRow.lastload}' AND sales_date <= '@{activity('LatestLoadFromSQL').output.firstRow.latestload}'",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_src_azuresql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_sink_datalake_azuresql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "Watermark",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "CopyDataFromAzureSQL",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT MAX(sales_date) AS LastLoad FROM [dbo].[FactSales];",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_src_azuresql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_sink_datalake_monitor",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-08-21T17:39:20Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/data-ingestion-github-to-datalake')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "ForEachFileinGithubRepo",
+						"type": "ForEach",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@pipeline().parameters.files",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "MigrateGithubData",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "HttpReadSettings",
+												"requestMethod": "GET"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_src_github",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_filename": {
+													"value": "@item().file_name",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_sink_datalake_github",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_foldername": {
+													"value": "@item().folder_name",
+													"type": "Expression"
+												},
+												"p_filename": {
+													"value": "@item().file_name",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"files": {
+						"type": "array",
+						"defaultValue": [
+							{
+								"folder_name": "campaigns",
+								"file_name": "dim_campaigns.csv"
+							},
+							{
+								"folder_name": "dates",
+								"file_name": "dim_dates.csv"
+							},
+							{
+								"folder_name": "products",
+								"file_name": "dim_products.csv"
+							},
+							{
+								"folder_name": "salespersons",
+								"file_name": "dim_salespersons.csv"
+							},
+							{
+								"folder_name": "stores",
+								"file_name": "dim_stores.csv"
+							}
+						]
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-08-21T16:34:43Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_src_onprem')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_onprem",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "FileServerLocation",
+						"fileName": "dim_customers.csv"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DataTransformation')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "df_src_campaign",
+								"type": "DatasetReference"
+							},
+							"name": "DimCampaign"
+						},
+						{
+							"dataset": {
+								"referenceName": "df_src_customer",
+								"type": "DatasetReference"
+							},
+							"name": "DimCustomer"
+						},
+						{
+							"dataset": {
+								"referenceName": "df_src_dates",
+								"type": "DatasetReference"
+							},
+							"name": "DimDates"
+						},
+						{
+							"dataset": {
+								"referenceName": "df_src_products",
+								"type": "DatasetReference"
+							},
+							"name": "DimProducts"
+						},
+						{
+							"dataset": {
+								"referenceName": "df_src_sales",
+								"type": "DatasetReference"
+							},
+							"name": "FactSales"
+						},
+						{
+							"dataset": {
+								"referenceName": "df_src_salesperson",
+								"type": "DatasetReference"
+							},
+							"name": "DimSalesPersons"
+						},
+						{
+							"dataset": {
+								"referenceName": "df_src_store",
+								"type": "DatasetReference"
+							},
+							"name": "DimStore"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "ls_adlsgen2",
+								"type": "LinkedServiceReference"
+							},
+							"name": "SinkCampaign"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_adlsgen2",
+								"type": "LinkedServiceReference"
+							},
+							"name": "SinkCustomer"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_adlsgen2",
+								"type": "LinkedServiceReference"
+							},
+							"name": "SinkDates"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_adlsgen2",
+								"type": "LinkedServiceReference"
+							},
+							"name": "SinkProducts"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_adlsgen2",
+								"type": "LinkedServiceReference"
+							},
+							"name": "SinkSales"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_adlsgen2",
+								"type": "LinkedServiceReference"
+							},
+							"name": "SinkSalesPerson"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_adlsgen2",
+								"type": "LinkedServiceReference"
+							},
+							"name": "SinkStore"
+						}
+					],
+					"transformations": [
+						{
+							"name": "AlterRowCampaign"
+						},
+						{
+							"name": "FullName"
+						},
+						{
+							"name": "DeriveUserID"
+						},
+						{
+							"name": "RenameSelect"
+						},
+						{
+							"name": "AlterRowCustomer"
+						},
+						{
+							"name": "NewQuarterCol"
+						},
+						{
+							"name": "CastQuarterName"
+						},
+						{
+							"name": "ReplaceQuarter1"
+						},
+						{
+							"name": "ReplaceQuarter2"
+						},
+						{
+							"name": "ReplaceQuarter3"
+						},
+						{
+							"name": "ReplaceQuarter4"
+						},
+						{
+							"name": "AlterRowDates"
+						},
+						{
+							"name": "SelectAndRenameColumn"
+						},
+						{
+							"name": "ModifyProductIDCol"
+						},
+						{
+							"name": "AlterRowProducts"
+						},
+						{
+							"name": "ModifySalesID"
+						},
+						{
+							"name": "AlterRowSales"
+						},
+						{
+							"name": "DeriveFirstName"
+						},
+						{
+							"name": "DeriveLastName"
+						},
+						{
+							"name": "AlterRowSalesPerson"
+						},
+						{
+							"name": "SortBySalesDate"
+						},
+						{
+							"name": "ModifyStorename"
+						},
+						{
+							"name": "SelectandRenameCol"
+						},
+						{
+							"name": "ModifyStoreID"
+						},
+						{
+							"name": "AlterRowStore"
+						},
+						{
+							"name": "ModifyStoreType"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          campaign_sk as integer,",
+						"          campaign_id as string,",
+						"          campaign_name as string,",
+						"          start_date_sk as integer,",
+						"          end_date_sk as integer,",
+						"          campaign_budget as integer",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> DimCampaign",
+						"source(output(",
+						"          customer_sk as integer,",
+						"          customer_id as string,",
+						"          first_name as string,",
+						"          last_name as string,",
+						"          email as string,",
+						"          residential_location as string,",
+						"          customer_segment as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> DimCustomer",
+						"source(output(",
+						"          full_date as date,",
+						"          date_sk as integer,",
+						"          year as integer,",
+						"          month as integer,",
+						"          day as integer,",
+						"          weekday as integer,",
+						"          quarter as integer",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> DimDates",
+						"source(output(",
+						"          product_sk as short,",
+						"          product_id as string,",
+						"          product_name as string,",
+						"          category as string,",
+						"          brand as string,",
+						"          origin_location as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> DimProducts",
+						"source(output(",
+						"          sales_sk as integer,",
+						"          sales_id as string,",
+						"          customer_sk as integer,",
+						"          product_sk as integer,",
+						"          store_sk as integer,",
+						"          salesperson_sk as integer,",
+						"          campaign_sk as integer,",
+						"          sales_date as date,",
+						"          total_amount as double",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'parquet') ~> FactSales",
+						"source(output(",
+						"          salesperson_sk as short,",
+						"          salesperson_id as string,",
+						"          salesperson_name as string,",
+						"          salesperson_role as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> DimSalesPersons",
+						"source(output(",
+						"          store_sk as short,",
+						"          store_id as string,",
+						"          store_name as string,",
+						"          store_type as string,",
+						"          store_location as string,",
+						"          store_manager_sk as short",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> DimStore",
+						"DimCampaign alterRow(upsertIf(1==1)) ~> AlterRowCampaign",
+						"DimCustomer derive(full_name = first_name + \" \" + last_name) ~> FullName",
+						"FullName derive(user_id = split(email, '@')[1]) ~> DeriveUserID",
+						"DeriveUserID select(mapColumn(",
+						"          customer_sk,",
+						"          customer_id,",
+						"          first_name,",
+						"          last_name,",
+						"          email,",
+						"          location = residential_location,",
+						"          customer_segment,",
+						"          full_name,",
+						"          user_id",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> RenameSelect",
+						"RenameSelect alterRow(upsertIf(1==1)) ~> AlterRowCustomer",
+						"DimDates derive(quarter_name = quarter) ~> NewQuarterCol",
+						"NewQuarterCol cast(output(",
+						"          quarter_name as string",
+						"     ),",
+						"     errors: true) ~> CastQuarterName",
+						"CastQuarterName derive(quarter_name = regexReplace(quarter_name, \"1\", \"Q1\")) ~> ReplaceQuarter1",
+						"ReplaceQuarter1 derive(quarter_name = regexReplace(quarter_name, \"2\", \"Q2\")) ~> ReplaceQuarter2",
+						"ReplaceQuarter2 derive(quarter_name = regexReplace(quarter_name, \"3\", \"Q3\")) ~> ReplaceQuarter3",
+						"ReplaceQuarter3 derive(quarter_name = regexReplace(quarter_name, \"4\", \"Q4\")) ~> ReplaceQuarter4",
+						"ReplaceQuarter4 alterRow(upsertIf(1==1)) ~> AlterRowDates",
+						"DimProducts select(mapColumn(",
+						"          product_sk,",
+						"          product_id,",
+						"          product_name,",
+						"          category,",
+						"          brand,",
+						"          location = origin_location",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectAndRenameColumn",
+						"SelectAndRenameColumn derive(product_id = regexReplace(product_id, '_', \"\")) ~> ModifyProductIDCol",
+						"ModifyProductIDCol alterRow(upsertIf(1==1)) ~> AlterRowProducts",
+						"FactSales derive(sales_id = regexReplace(sales_id, \"_\", \"\")) ~> ModifySalesID",
+						"SortBySalesDate alterRow(upsertIf(1==1)) ~> AlterRowSales",
+						"DimSalesPersons derive(first_name = split(salesperson_name, \" \")[1]) ~> DeriveFirstName",
+						"DeriveFirstName derive(last_name = split(salesperson_name, \" \")[2]) ~> DeriveLastName",
+						"DeriveLastName alterRow(upsertIf(1==1)) ~> AlterRowSalesPerson",
+						"ModifySalesID sort(desc(sales_date, true)) ~> SortBySalesDate",
+						"ModifyStoreID derive(store_name = upper(store_name)) ~> ModifyStorename",
+						"ModifyStoreType select(mapColumn(",
+						"          store_sk,",
+						"          store_id,",
+						"          store_name,",
+						"          store_type,",
+						"          location = store_location,",
+						"          store_manager_sk",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectandRenameCol",
+						"DimStore derive(store_id = regexReplace(store_id, \"STR_00\", \"STORE\")) ~> ModifyStoreID",
+						"SelectandRenameCol alterRow(upsertIf(1==1)) ~> AlterRowStore",
+						"ModifyStorename derive(store_type = regexReplace(store_type, \"/\", \"or\")) ~> ModifyStoreType",
+						"AlterRowCampaign sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delta',",
+						"     fileSystem: 'retail-silver',",
+						"     folderPath: 'campaign',",
+						"     mergeSchema: false,",
+						"     autoCompact: false,",
+						"     optimizedWrite: false,",
+						"     vacuum: 0,",
+						"     deletable: false,",
+						"     insertable: false,",
+						"     updateable: false,",
+						"     upsertable: true,",
+						"     keys:['campaign_sk'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SinkCampaign",
+						"AlterRowCustomer sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delta',",
+						"     fileSystem: 'retail-silver',",
+						"     folderPath: 'customer',",
+						"     mergeSchema: false,",
+						"     autoCompact: false,",
+						"     optimizedWrite: false,",
+						"     vacuum: 0,",
+						"     deletable: false,",
+						"     insertable: false,",
+						"     updateable: false,",
+						"     upsertable: true,",
+						"     keys:['customer_id'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SinkCustomer",
+						"AlterRowDates sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delta',",
+						"     fileSystem: 'retail-silver',",
+						"     folderPath: 'dates',",
+						"     mergeSchema: false,",
+						"     autoCompact: false,",
+						"     optimizedWrite: false,",
+						"     vacuum: 0,",
+						"     deletable: false,",
+						"     insertable: false,",
+						"     updateable: false,",
+						"     upsertable: true,",
+						"     keys:['date_sk'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SinkDates",
+						"AlterRowProducts sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delta',",
+						"     fileSystem: 'retail-silver',",
+						"     folderPath: 'products',",
+						"     mergeSchema: false,",
+						"     autoCompact: false,",
+						"     optimizedWrite: false,",
+						"     vacuum: 0,",
+						"     deletable: false,",
+						"     insertable: false,",
+						"     updateable: false,",
+						"     upsertable: true,",
+						"     keys:['product_sk'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SinkProducts",
+						"AlterRowSales sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delta',",
+						"     fileSystem: 'retail-silver',",
+						"     folderPath: 'sales',",
+						"     mergeSchema: false,",
+						"     autoCompact: false,",
+						"     optimizedWrite: false,",
+						"     vacuum: 0,",
+						"     deletable: false,",
+						"     insertable: false,",
+						"     updateable: false,",
+						"     upsertable: true,",
+						"     keys:['sales_sk'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SinkSales",
+						"AlterRowSalesPerson sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delta',",
+						"     fileSystem: 'retail-silver',",
+						"     folderPath: 'salesperson',",
+						"     mergeSchema: false,",
+						"     autoCompact: false,",
+						"     optimizedWrite: false,",
+						"     vacuum: 0,",
+						"     deletable: false,",
+						"     insertable: false,",
+						"     updateable: false,",
+						"     upsertable: true,",
+						"     keys:['salesperson_sk'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SinkSalesPerson",
+						"AlterRowStore sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delta',",
+						"     fileSystem: 'retail-silver',",
+						"     folderPath: 'store',",
+						"     mergeSchema: false,",
+						"     autoCompact: false,",
+						"     optimizedWrite: false,",
+						"     vacuum: 0,",
+						"     deletable: false,",
+						"     insertable: false,",
+						"     updateable: false,",
+						"     upsertable: true,",
+						"     keys:['store_sk'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SinkStore"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/data-ingestion-onprem-to-datalake')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "MigrateOnPremData",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "FileServerReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_src_onprem",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_sink_datalake_onprem",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-08-21T16:17:03Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_src_onprem')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/data-transformation-bronze-to-silver')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data Transformation",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "DataTransformation",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"DimCampaign": {},
+									"DimCustomer": {},
+									"DimDates": {},
+									"DimProducts": {},
+									"FactSales": {},
+									"DimSalesPersons": {},
+									"DimStore": {},
+									"SinkCampaign": {},
+									"SinkCustomer": {},
+									"SinkDates": {},
+									"SinkProducts": {},
+									"SinkSales": {},
+									"SinkSalesPerson": {},
+									"SinkStore": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 16,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-08-23T14:36:52Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/DataTransformation')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/data-ingestion-parent-pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "ExecutePipelineOnPrermToDatalake",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "data-ingestion-onprem-to-datalake",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "ExecutePipelineGithubToDatalake",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "ExecutePipelineOnPrermToDatalake",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "data-ingestion-github-to-datalake",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"files": {
+									"value": "@pipeline().parameters.files",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "ExecutePipelineAzureSqlToDatalake",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "ExecutePipelineGithubToDatalake",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "data-ingestion-azuresql-to-datalake",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "SendNotificationViaLogicApp",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "ExecutePipelineAzureSqlToDatalake",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "POST",
+							"headers": {},
+							"url": {
+								"value": "https://prod-190.westus.logic.azure.com:443/workflows/70a2d74df8b6459c992f37b78063814d/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=_D06e-Jj1cD60QWBHNmNbiSTmrTDbeS6BAS9DzNGzIk",
+								"type": "Expression"
+							},
+							"body": {
+								"value": "{\n    \"pipeline_name\" : \"@{pipeline().Pipeline}\",\n    \"run_id\" : \"@{pipeline().RunId}\",\n    \"status\" : \"@{activity('ExecutePipelineAzureSqlToDatalake').Status}\",\n    \"error\" : \"@{if(equals(activity('ExecutePipelineAzureSqlToDatalake').status, 'Failed'), string(activity('ExecutePipelineAzureSqlToDatalake').output.error), 'No Error')}\"\n}",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"files": {
+						"type": "array",
+						"defaultValue": [
+							{
+								"folder_name": "campaigns",
+								"file_name": "dim_campaigns.csv"
+							},
+							{
+								"folder_name": "dates",
+								"file_name": "dim_dates.csv"
+							},
+							{
+								"folder_name": "products",
+								"file_name": "dim_products.csv"
+							},
+							{
+								"folder_name": "salespersons",
+								"file_name": "dim_salespersons.csv"
+							},
+							{
+								"folder_name": "stores",
+								"file_name": "dim_stores.csv"
+							}
+						]
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-08-21T18:03:11Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/data-ingestion-onprem-to-datalake')]",
+				"[concat(variables('factoryId'), '/pipelines/data-ingestion-github-to-datalake')]",
+				"[concat(variables('factoryId'), '/pipelines/data-ingestion-azuresql-to-datalake')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/data-transformation-aggregation-pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Execute Pipeline Data Transformation",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "data-transformation-bronze-to-silver",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "SendNotificationViaLogicApp1",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "Execute Pipeline Data Transformation",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "POST",
+							"headers": {},
+							"url": {
+								"value": "https://prod-141.westus.logic.azure.com:443/workflows/2eb01805588f48e88c38bf313bd97cc7/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=wpIfeVMhicZjay8lcAk7DE93Dsyq8Ai_zek0nn9Xecg",
+								"type": "Expression"
+							},
+							"body": {
+								"value": "{\n    \"pipeline_name\" : \"@{pipeline().Pipeline}\",\n    \"run_id\" : \"@{pipeline().RunId}\",\n    \"status\" : \"@{activity('Execute Pipeline Data Transformation').Status}\",\n    \"error\" : \"@{if(equals(activity('Execute Pipeline Data Transformation').status, 'Failed'), string(activity('Execute Pipeline Data Transformation').output.error), 'No Error')}\"\n}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Execute Pipeline Data Aggregation",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "SendNotificationViaLogicApp1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "data-aggregation-serving-silver-to-gold",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "SendNotificationViaLogicApp2",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "Execute Pipeline Data Aggregation",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "POST",
+							"headers": {},
+							"url": {
+								"value": "https://prod-39.westus.logic.azure.com:443/workflows/c5ee6f06713d42b4abf8d99e751fe3ce/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=_cdscOIZMI4ZJkyr-Sr0zAe5uGigEHSsgfAc3W-NHXE",
+								"type": "Expression"
+							},
+							"body": {
+								"value": "{\n    \"pipeline_name\" : \"@{pipeline().Pipeline}\",\n    \"run_id\" : \"@{pipeline().RunId}\",\n    \"status\" : \"@{activity('Execute Pipeline Data Aggregation').Status}\",\n    \"error\" : \"@{if(equals(activity('Execute Pipeline Data Aggregation').status, 'Failed'), string(activity('Execute Pipeline Data Aggregation').output.error), 'No Error')}\"\n}",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-08-23T15:20:54Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/data-transformation-bronze-to-silver')]",
+				"[concat(variables('factoryId'), '/pipelines/data-aggregation-serving-silver-to-gold')]"
+			]
+		}
+	]
+}
