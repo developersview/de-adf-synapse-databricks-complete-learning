@@ -1,0 +1,7 @@
+{
+	"name": "PranoySelfHostedIntegrationRuntime",
+	"properties": {
+		"type": "SelfHosted",
+		"description": "This is self hosted integration runtime created to move data from OnPrem Server to ADLS Gen 2"
+	}
+}

@@ -1,0 +1,9 @@
+{
+	"name": "pranoy-data-factory2",
+	"location": "westus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "c2b773d5-d931-4ab8-99ce-3875d8db7593",
+		"tenantId": "652ce2d9-fad8-4bd5-a0aa-a3cc8182f52f"
+	}
+}

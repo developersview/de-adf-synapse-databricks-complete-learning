@@ -1,0 +1,124 @@
+{
+	"name": "data-ingestion-github-to-datalake",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEachFileinGithubRepo",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.files",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "MigrateGithubData",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "GET"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_src_github",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_filename": {
+											"value": "@item().file_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_sink_datalake_github",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_foldername": {
+											"value": "@item().folder_name",
+											"type": "Expression"
+										},
+										"p_filename": {
+											"value": "@item().file_name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"files": {
+				"type": "array",
+				"defaultValue": [
+					{
+						"folder_name": "campaigns",
+						"file_name": "dim_campaigns.csv"
+					},
+					{
+						"folder_name": "dates",
+						"file_name": "dim_dates.csv"
+					},
+					{
+						"folder_name": "products",
+						"file_name": "dim_products.csv"
+					},
+					{
+						"folder_name": "salespersons",
+						"file_name": "dim_salespersons.csv"
+					},
+					{
+						"folder_name": "stores",
+						"file_name": "dim_stores.csv"
+					}
+				]
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-08-21T16:34:43Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

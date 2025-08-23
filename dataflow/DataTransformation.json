@@ -1,0 +1,465 @@
+{
+	"name": "DataTransformation",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "df_src_campaign",
+						"type": "DatasetReference"
+					},
+					"name": "DimCampaign"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_src_customer",
+						"type": "DatasetReference"
+					},
+					"name": "DimCustomer"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_src_dates",
+						"type": "DatasetReference"
+					},
+					"name": "DimDates"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_src_products",
+						"type": "DatasetReference"
+					},
+					"name": "DimProducts"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_src_sales",
+						"type": "DatasetReference"
+					},
+					"name": "FactSales"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_src_salesperson",
+						"type": "DatasetReference"
+					},
+					"name": "DimSalesPersons"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_src_store",
+						"type": "DatasetReference"
+					},
+					"name": "DimStore"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "ls_adlsgen2",
+						"type": "LinkedServiceReference"
+					},
+					"name": "SinkCampaign"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_adlsgen2",
+						"type": "LinkedServiceReference"
+					},
+					"name": "SinkCustomer"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_adlsgen2",
+						"type": "LinkedServiceReference"
+					},
+					"name": "SinkDates"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_adlsgen2",
+						"type": "LinkedServiceReference"
+					},
+					"name": "SinkProducts"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_adlsgen2",
+						"type": "LinkedServiceReference"
+					},
+					"name": "SinkSales"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_adlsgen2",
+						"type": "LinkedServiceReference"
+					},
+					"name": "SinkSalesPerson"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_adlsgen2",
+						"type": "LinkedServiceReference"
+					},
+					"name": "SinkStore"
+				}
+			],
+			"transformations": [
+				{
+					"name": "AlterRowCampaign"
+				},
+				{
+					"name": "FullName"
+				},
+				{
+					"name": "DeriveUserID"
+				},
+				{
+					"name": "RenameSelect"
+				},
+				{
+					"name": "AlterRowCustomer"
+				},
+				{
+					"name": "NewQuarterCol"
+				},
+				{
+					"name": "CastQuarterName"
+				},
+				{
+					"name": "ReplaceQuarter1"
+				},
+				{
+					"name": "ReplaceQuarter2"
+				},
+				{
+					"name": "ReplaceQuarter3"
+				},
+				{
+					"name": "ReplaceQuarter4"
+				},
+				{
+					"name": "AlterRowDates"
+				},
+				{
+					"name": "SelectAndRenameColumn"
+				},
+				{
+					"name": "ModifyProductIDCol"
+				},
+				{
+					"name": "AlterRowProducts"
+				},
+				{
+					"name": "ModifySalesID"
+				},
+				{
+					"name": "AlterRowSales"
+				},
+				{
+					"name": "DeriveFirstName"
+				},
+				{
+					"name": "DeriveLastName"
+				},
+				{
+					"name": "AlterRowSalesPerson"
+				},
+				{
+					"name": "SortBySalesDate"
+				},
+				{
+					"name": "ModifyStorename"
+				},
+				{
+					"name": "SelectandRenameCol"
+				},
+				{
+					"name": "ModifyStoreID"
+				},
+				{
+					"name": "AlterRowStore"
+				},
+				{
+					"name": "ModifyStoreType"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          campaign_sk as integer,",
+				"          campaign_id as string,",
+				"          campaign_name as string,",
+				"          start_date_sk as integer,",
+				"          end_date_sk as integer,",
+				"          campaign_budget as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> DimCampaign",
+				"source(output(",
+				"          customer_sk as integer,",
+				"          customer_id as string,",
+				"          first_name as string,",
+				"          last_name as string,",
+				"          email as string,",
+				"          residential_location as string,",
+				"          customer_segment as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> DimCustomer",
+				"source(output(",
+				"          full_date as date,",
+				"          date_sk as integer,",
+				"          year as integer,",
+				"          month as integer,",
+				"          day as integer,",
+				"          weekday as integer,",
+				"          quarter as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> DimDates",
+				"source(output(",
+				"          product_sk as short,",
+				"          product_id as string,",
+				"          product_name as string,",
+				"          category as string,",
+				"          brand as string,",
+				"          origin_location as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> DimProducts",
+				"source(output(",
+				"          sales_sk as integer,",
+				"          sales_id as string,",
+				"          customer_sk as integer,",
+				"          product_sk as integer,",
+				"          store_sk as integer,",
+				"          salesperson_sk as integer,",
+				"          campaign_sk as integer,",
+				"          sales_date as date,",
+				"          total_amount as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> FactSales",
+				"source(output(",
+				"          salesperson_sk as short,",
+				"          salesperson_id as string,",
+				"          salesperson_name as string,",
+				"          salesperson_role as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> DimSalesPersons",
+				"source(output(",
+				"          store_sk as short,",
+				"          store_id as string,",
+				"          store_name as string,",
+				"          store_type as string,",
+				"          store_location as string,",
+				"          store_manager_sk as short",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> DimStore",
+				"DimCampaign alterRow(upsertIf(1==1)) ~> AlterRowCampaign",
+				"DimCustomer derive(full_name = first_name + \" \" + last_name) ~> FullName",
+				"FullName derive(user_id = split(email, '@')[1]) ~> DeriveUserID",
+				"DeriveUserID select(mapColumn(",
+				"          customer_sk,",
+				"          customer_id,",
+				"          first_name,",
+				"          last_name,",
+				"          email,",
+				"          location = residential_location,",
+				"          customer_segment,",
+				"          full_name,",
+				"          user_id",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> RenameSelect",
+				"RenameSelect alterRow(upsertIf(1==1)) ~> AlterRowCustomer",
+				"DimDates derive(quarter_name = quarter) ~> NewQuarterCol",
+				"NewQuarterCol cast(output(",
+				"          quarter_name as string",
+				"     ),",
+				"     errors: true) ~> CastQuarterName",
+				"CastQuarterName derive(quarter_name = regexReplace(quarter_name, \"1\", \"Q1\")) ~> ReplaceQuarter1",
+				"ReplaceQuarter1 derive(quarter_name = regexReplace(quarter_name, \"2\", \"Q2\")) ~> ReplaceQuarter2",
+				"ReplaceQuarter2 derive(quarter_name = regexReplace(quarter_name, \"3\", \"Q3\")) ~> ReplaceQuarter3",
+				"ReplaceQuarter3 derive(quarter_name = regexReplace(quarter_name, \"4\", \"Q4\")) ~> ReplaceQuarter4",
+				"ReplaceQuarter4 alterRow(upsertIf(1==1)) ~> AlterRowDates",
+				"DimProducts select(mapColumn(",
+				"          product_sk,",
+				"          product_id,",
+				"          product_name,",
+				"          category,",
+				"          brand,",
+				"          location = origin_location",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectAndRenameColumn",
+				"SelectAndRenameColumn derive(product_id = regexReplace(product_id, '_', \"\")) ~> ModifyProductIDCol",
+				"ModifyProductIDCol alterRow(upsertIf(1==1)) ~> AlterRowProducts",
+				"FactSales derive(sales_id = regexReplace(sales_id, \"_\", \"\")) ~> ModifySalesID",
+				"SortBySalesDate alterRow(upsertIf(1==1)) ~> AlterRowSales",
+				"DimSalesPersons derive(first_name = split(salesperson_name, \" \")[1]) ~> DeriveFirstName",
+				"DeriveFirstName derive(last_name = split(salesperson_name, \" \")[2]) ~> DeriveLastName",
+				"DeriveLastName alterRow(upsertIf(1==1)) ~> AlterRowSalesPerson",
+				"ModifySalesID sort(desc(sales_date, true)) ~> SortBySalesDate",
+				"ModifyStoreID derive(store_name = upper(store_name)) ~> ModifyStorename",
+				"ModifyStoreType select(mapColumn(",
+				"          store_sk,",
+				"          store_id,",
+				"          store_name,",
+				"          store_type,",
+				"          location = store_location,",
+				"          store_manager_sk",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectandRenameCol",
+				"DimStore derive(store_id = regexReplace(store_id, \"STR_00\", \"STORE\")) ~> ModifyStoreID",
+				"SelectandRenameCol alterRow(upsertIf(1==1)) ~> AlterRowStore",
+				"ModifyStorename derive(store_type = regexReplace(store_type, \"/\", \"or\")) ~> ModifyStoreType",
+				"AlterRowCampaign sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'retail-silver',",
+				"     folderPath: 'campaign',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['campaign_sk'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkCampaign",
+				"AlterRowCustomer sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'retail-silver',",
+				"     folderPath: 'customer',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['customer_id'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkCustomer",
+				"AlterRowDates sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'retail-silver',",
+				"     folderPath: 'dates',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['date_sk'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkDates",
+				"AlterRowProducts sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'retail-silver',",
+				"     folderPath: 'products',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['product_sk'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkProducts",
+				"AlterRowSales sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'retail-silver',",
+				"     folderPath: 'sales',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['sales_sk'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkSales",
+				"AlterRowSalesPerson sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'retail-silver',",
+				"     folderPath: 'salesperson',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['salesperson_sk'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkSalesPerson",
+				"AlterRowStore sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'delta',",
+				"     fileSystem: 'retail-silver',",
+				"     folderPath: 'store',",
+				"     mergeSchema: false,",
+				"     autoCompact: false,",
+				"     optimizedWrite: false,",
+				"     vacuum: 0,",
+				"     deletable: false,",
+				"     insertable: false,",
+				"     updateable: false,",
+				"     upsertable: true,",
+				"     keys:['store_sk'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkStore"
+			]
+		}
+	}
+}

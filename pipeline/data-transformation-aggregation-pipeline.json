@@ -1,0 +1,111 @@
+{
+	"name": "data-transformation-aggregation-pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Execute Pipeline Data Transformation",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "data-transformation-bronze-to-silver",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "SendNotificationViaLogicApp1",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Execute Pipeline Data Transformation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": {
+						"value": "https://prod-141.westus.logic.azure.com:443/workflows/2eb01805588f48e88c38bf313bd97cc7/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=wpIfeVMhicZjay8lcAk7DE93Dsyq8Ai_zek0nn9Xecg",
+						"type": "Expression"
+					},
+					"body": {
+						"value": "{\n    \"pipeline_name\" : \"@{pipeline().Pipeline}\",\n    \"run_id\" : \"@{pipeline().RunId}\",\n    \"status\" : \"@{activity('Execute Pipeline Data Transformation').Status}\",\n    \"error\" : \"@{if(equals(activity('Execute Pipeline Data Transformation').status, 'Failed'), string(activity('Execute Pipeline Data Transformation').output.error), 'No Error')}\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute Pipeline Data Aggregation",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "SendNotificationViaLogicApp1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "data-aggregation-serving-silver-to-gold",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "SendNotificationViaLogicApp2",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Execute Pipeline Data Aggregation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": {
+						"value": "https://prod-39.westus.logic.azure.com:443/workflows/c5ee6f06713d42b4abf8d99e751fe3ce/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=_cdscOIZMI4ZJkyr-Sr0zAe5uGigEHSsgfAc3W-NHXE",
+						"type": "Expression"
+					},
+					"body": {
+						"value": "{\n    \"pipeline_name\" : \"@{pipeline().Pipeline}\",\n    \"run_id\" : \"@{pipeline().RunId}\",\n    \"status\" : \"@{activity('Execute Pipeline Data Aggregation').Status}\",\n    \"error\" : \"@{if(equals(activity('Execute Pipeline Data Aggregation').status, 'Failed'), string(activity('Execute Pipeline Data Aggregation').output.error), 'No Error')}\"\n}",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-08-23T15:20:54Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
